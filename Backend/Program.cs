@@ -36,5 +36,15 @@ app.MapGet("/", () => "Hello, World!");
 app.MapGet("/requires-auth", (ClaimsPrincipal user) => $"Hello, {user.Identity?.Name}!").RequireAuthorization();
 
 app.MapGroup("/identity").MapIdentityApi<IdentityUser>();
+app.MapGroup("/identity").MapPost("/logout", async (SignInManager<IdentityUser> signInManager,
+    ClaimsPrincipal user) =>
+{
+    if (user.Identity?.Name != null)
+    {
+        await signInManager.SignOutAsync();
+        return Results.Ok();
+    }
+    return Results.Unauthorized();
+});
 
 app.Run();
