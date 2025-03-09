@@ -1,7 +1,8 @@
 using Backend.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
-using System.Security.Claims;
+using Backend.Api;
+using API.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,28 +24,20 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi(); //add /openapi/v1.json
-    app.UseSwaggerUi(options =>
+    // add /openapi/v1.json
+    app.MapOpenApi(); 
+    // add /swagger endpoint
+    app.UseSwaggerUI(options =>
     {
-        options.DocumentPath = "/openapi/v1.json";
-    }); // add /swagger endpoint
+        options.SwaggerEndpoint("/openapi/v1.json", "v1");
+    });
+    // save seed data
+    app.InitDb();
 }
 
 app.UseHttpsRedirection();
 
-app.MapGet("/", () => "Hello, World!");
-app.MapGet("/requires-auth", (ClaimsPrincipal user) => $"Hello, {user.Identity?.Name}!").RequireAuthorization();
-
-app.MapGroup("/identity").MapIdentityApi<IdentityUser>();
-app.MapGroup("/identity").MapPost("/logout", async (SignInManager<IdentityUser> signInManager,
-    ClaimsPrincipal user) =>
-{
-    if (user.Identity?.Name != null)
-    {
-        await signInManager.SignOutAsync();
-        return Results.Ok();
-    }
-    return Results.Unauthorized();
-});
+app.MapGroup("/").MapRootApi();
+app.MapGroup("/identity").MapIdentityApi();
 
 app.Run();
