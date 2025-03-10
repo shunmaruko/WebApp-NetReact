@@ -15,10 +15,10 @@ public static class IdentityEndpoints
         // default endpoints
         group.MapIdentityApi<IdentityUser>();
         // customized endpoints
-        group.MapPost("/logout", async (SignInManager<IdentityUser> signInManager) =>
+        group.MapPost("/logout", async Task<NoContent>(SignInManager<IdentityUser> signInManager) =>
         {
             await signInManager.SignOutAsync();
-            return Results.NoContent();
+            return TypedResults.NoContent();
         });
         group.MapPost("/register-new", async Task<Results<Ok, ValidationProblem>>
             ([FromBody] RegisterRequest registration, HttpContext context, UserManager<IdentityUser> userManager, IUserStore<IdentityUser> userStore) =>
@@ -55,6 +55,8 @@ public static class IdentityEndpoints
         });
         return group;
     }
+
+    
     private static ValidationProblem CreateValidationProblem(IdentityResult result)
     {
         // We expect a single error code and description in the normal case.
