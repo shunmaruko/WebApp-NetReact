@@ -1,0 +1,6 @@
+{
+"SendGridApiKey": "[REPLACE WITH YOUR API KEY]",
+"FromName": "[REPLACE WITH YOUR NAME]",
+"FromEmail": "[REPLACE WITH YOUR EMAIL]",
+"ToEmail": "[REPLACE WITH SOME EMAIL]"
+}

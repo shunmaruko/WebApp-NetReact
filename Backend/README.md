@@ -1,5 +1,27 @@
 # Backend
 
+## Setup (Only at first time)
+We use [Send Grid](https://sendgrid.com/en-us/solutions/email-api) to send email, so need to create acount and get api key. To create account, please visit [here](https://www.twilio.com/en-us/blog/send-emails-using-the-sendgrid-api-with-dotnetnet-6-and-csharp#configuring-your-sendgrid-account-to-send-emails).
+
+
+Once you create account, please make input.json by edditing [input.template.json](./input.template.json).
+
+
+Last, you need to register input.json to secret manager. To start secret manager, run the following:
+```
+dotnet user-secrets init
+```
+You can register secrets to secret manager by:
+```
+cat ./input.json | dotnet user-secrets set
+```
+
+Reference:
+- [tutorial](https://www.twilio.com/en-us/blog/send-emails-using-the-sendgrid-api-with-dotnetnet-6-and-csharp)
+- [microsoft docs(Secret Manager)](https://learn.microsoft.com/ja-jp/aspnet/core/security/app-secrets?view=aspnetcore-9.0&tabs=linux)
+
+## Run
+
 To run Backend, 
 
 ```dotnet watch -lp https```

@@ -38,3 +38,6 @@ msbuild.wrn
 
 # sqlite
 *db
+
+# secret file
+input.json

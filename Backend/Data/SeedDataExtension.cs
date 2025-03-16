@@ -2,7 +2,7 @@
 using Backend.Data;
 using Microsoft.AspNetCore.Identity;
 
-namespace API.Data;
+namespace Backend.Data;
 
 public static class SeedDataExtension
 {
