@@ -69,17 +69,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.MapGroup("/").MapRootApi();
-app.MapGroup("/identity").MapIdentityApi();
-
-//app.Run();
-// send mail
-var fromEmail = builder.Configuration.GetValue<string>("FromEmail") ?? throw new Exception("FromEmail should not be null or empty"); 
-var fromName = builder.Configuration.GetValue<string>("FromName") ?? throw new Exception("FromName should not be null or empty");
-var apiKey = builder.Configuration.GetValue<string>("SendGridApiKey") ?? throw new Exception("SendGridApiKey should not be null or empty"); 
-var toEmail = builder.Configuration.GetValue<string>("ToEmail") ?? throw new Exception("ToEmail should not be null or empty"); 
-var subject = "Sample Subject";
-var body = "Sample Body";
-var client = app.Services.GetRequiredService<ISendGridClient>();
-await MailSender.SendMail(client, fromEmail, fromName, toEmail, toEmail, subject, body);
+app.MapGroup("/").MapRootApi().WithTags("Root");
+app.MapGroup("/identity").MapIdentityApi().WithTags("Identity");
+app.MapGroup("/email").MapEmailApi().WithTags("Email");
+app.Run();
 
