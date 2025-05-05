@@ -48,6 +48,8 @@ public static class SeedDataExtension
             };
             await userManager.CreateAsync(admin, "Pa$$w0rd");
             await userManager.AddToRolesAsync(admin, ["Admin", "General"]);
+            var token = await userManager.GenerateEmailConfirmationTokenAsync(admin);
+            await userManager.ConfirmEmailAsync(admin, token);
         }
         context.SaveChanges();
     }
