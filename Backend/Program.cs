@@ -9,10 +9,10 @@ using Backend.Data;
 using Backend.Api;
 using Backend.Service;
 using SendGrid.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Identity.UI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddUserSecrets<Program>(); // required to use secrets
-
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
@@ -39,11 +39,10 @@ builder.Services.Configure<IdentityOptions>(options =>
     options.Password.RequiredLength = 6;
     options.Password.RequiredUniqueChars = 1;
     // Default SignIn settings.
-    options.SignIn.RequireConfirmedEmail = false;
+    options.SignIn.RequireConfirmedEmail = true;
     options.SignIn.RequireConfirmedPhoneNumber = false;
     // Default User settings.
-    options.User.AllowedUserNameCharacters =
-            "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+";
+    options.User.AllowedUserNameCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+";
     options.User.RequireUniqueEmail = true; // defaults to false
 });
 // add send grid to di container
@@ -51,6 +50,7 @@ builder.Services.AddSendGrid(options =>
 {
     options.ApiKey = builder.Configuration.GetValue<string>("SendGridApiKey");
 });
+builder.Services.AddTransient<IEmailSender, MailSender>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

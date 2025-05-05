@@ -24,7 +24,7 @@
         }
       }
     },
-    "/requires-auth": {
+    "/protected-me": {
       "get": {
         "tags": [
           "Root"
@@ -39,6 +39,56 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/identity/login": {
+      "post": {
+        "tags": [
+          "Identity"
+        ],
+        "parameters": [
+          {
+            "name": "useCookies",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessTokenResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/identity/logout": {
+      "post": {
+        "tags": [
+          "Identity"
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
           }
         }
       }
@@ -75,80 +125,6 @@
         }
       }
     },
-    "/identity/login": {
-      "post": {
-        "tags": [
-          "Identity"
-        ],
-        "parameters": [
-          {
-            "name": "useCookies",
-            "in": "query",
-            "schema": {
-              "type": "boolean"
-            }
-          },
-          {
-            "name": "useSessionCookies",
-            "in": "query",
-            "schema": {
-              "type": "boolean"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/LoginRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AccessTokenResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/identity/refresh": {
-      "post": {
-        "tags": [
-          "Identity"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RefreshRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AccessTokenResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/identity/confirmEmail": {
       "get": {
         "tags": [
@@ -174,6 +150,13 @@
           },
           {
             "name": "changedEmail",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "returnUri",
             "in": "query",
             "schema": {
               "type": "string"
@@ -209,112 +192,6 @@
         }
       }
     },
-    "/identity/forgotPassword": {
-      "post": {
-        "tags": [
-          "Identity"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ForgotPasswordRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/identity/resetPassword": {
-      "post": {
-        "tags": [
-          "Identity"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ResetPasswordRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/identity/manage/2fa": {
-      "post": {
-        "tags": [
-          "Identity"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TwoFactorRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TwoFactorResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found"
-          }
-        }
-      }
-    },
     "/identity/manage/info": {
       "get": {
         "tags": [
@@ -345,90 +222,6 @@
             "description": "Not Found"
           }
         }
-      },
-      "post": {
-        "tags": [
-          "Identity"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/InfoRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InfoResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found"
-          }
-        }
-      }
-    },
-    "/identity/logout": {
-      "post": {
-        "tags": [
-          "Identity"
-        ],
-        "responses": {
-          "204": {
-            "description": "No Content"
-          }
-        }
-      }
-    },
-    "/identity/register-new": {
-      "post": {
-        "tags": [
-          "Identity"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RegisterRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
-                }
-              }
-            }
-          }
-        }
       }
     },
     "/email/send": {
@@ -436,11 +229,37 @@
         "tags": [
           "Email"
         ],
+        "parameters": [
+          {
+            "name": "email",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subject",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "htmlMessage",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SendMailArg"
+                "$ref": "#/components/schemas/MailSender"
               }
             }
           },
@@ -483,17 +302,6 @@
           }
         }
       },
-      "ForgotPasswordRequest": {
-        "required": [
-          "email"
-        ],
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string"
-          }
-        }
-      },
       "HttpValidationProblemDetails": {
         "type": "object",
         "properties": {
@@ -529,27 +337,11 @@
           }
         }
       },
-      "InfoRequest": {
-        "type": "object",
-        "properties": {
-          "newEmail": {
-            "type": "string",
-            "nullable": true
-          },
-          "newPassword": {
-            "type": "string",
-            "nullable": true
-          },
-          "oldPassword": {
-            "type": "string",
-            "nullable": true
-          }
-        }
-      },
       "InfoResponse": {
         "required": [
           "email",
-          "isEmailConfirmed"
+          "isEmailConfirmed",
+          "roles"
         ],
         "type": "object",
         "properties": {
@@ -558,6 +350,12 @@
           },
           "isEmailConfirmed": {
             "type": "boolean"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -573,27 +371,11 @@
           },
           "password": {
             "type": "string"
-          },
-          "twoFactorCode": {
-            "type": "string",
-            "nullable": true
-          },
-          "twoFactorRecoveryCode": {
-            "type": "string",
-            "nullable": true
           }
         }
       },
-      "RefreshRequest": {
-        "required": [
-          "refreshToken"
-        ],
-        "type": "object",
-        "properties": {
-          "refreshToken": {
-            "type": "string"
-          }
-        }
+      "MailSender": {
+        "type": "object"
       },
       "RegisterRequest": {
         "required": [
@@ -618,100 +400,6 @@
         "properties": {
           "email": {
             "type": "string"
-          }
-        }
-      },
-      "ResetPasswordRequest": {
-        "required": [
-          "email",
-          "resetCode",
-          "newPassword"
-        ],
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string"
-          },
-          "resetCode": {
-            "type": "string"
-          },
-          "newPassword": {
-            "type": "string"
-          }
-        }
-      },
-      "SendMailArg": {
-        "required": [
-          "toMailList",
-          "subject",
-          "body"
-        ],
-        "type": "object",
-        "properties": {
-          "toMailList": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "subject": {
-            "type": "string"
-          },
-          "body": {
-            "type": "string"
-          }
-        }
-      },
-      "TwoFactorRequest": {
-        "type": "object",
-        "properties": {
-          "enable": {
-            "type": "boolean",
-            "nullable": true
-          },
-          "twoFactorCode": {
-            "type": "string",
-            "nullable": true
-          },
-          "resetSharedKey": {
-            "type": "boolean"
-          },
-          "resetRecoveryCodes": {
-            "type": "boolean"
-          },
-          "forgetMachine": {
-            "type": "boolean"
-          }
-        }
-      },
-      "TwoFactorResponse": {
-        "required": [
-          "sharedKey",
-          "recoveryCodesLeft",
-          "isTwoFactorEnabled",
-          "isMachineRemembered"
-        ],
-        "type": "object",
-        "properties": {
-          "sharedKey": {
-            "type": "string"
-          },
-          "recoveryCodesLeft": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "recoveryCodes": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "nullable": true
-          },
-          "isTwoFactorEnabled": {
-            "type": "boolean"
-          },
-          "isMachineRemembered": {
-            "type": "boolean"
           }
         }
       }

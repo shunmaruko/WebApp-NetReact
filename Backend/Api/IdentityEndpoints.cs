@@ -1,27 +1,58 @@
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
+using System.Security.Claims;
+using System.Text;
+using System.Text.Encodings.Web;
+using Microsoft.AspNetCore.Authentication.BearerToken;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.Data;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
 
 namespace Backend.Api;
 
 public static class IdentityEndpoints
 {
+    //pls see https://github.com/dotnet/aspnetcore/blob/main/src/Identity/Core/src/IdentityApiEndpointRouteBuilderExtensions.cs
     private static readonly EmailAddressAttribute _emailAddressAttribute = new();
-    public static RouteGroupBuilder MapIdentityApi(this RouteGroupBuilder group)
+    
+    public static RouteGroupBuilder MapIdentityApi(this RouteGroupBuilder routeGroup)
     {
+        // We'll figure out a unique endpoint name based on the final route pattern during endpoint generation.
+        string? confirmEmailEndpointName = null;
         // default endpoints
-        group.MapIdentityApi<IdentityUser>();
+        //group.MapIdentityApi<IdentityUser>();
+        routeGroup.MapPost("/login", async Task<Results<Ok<AccessTokenResponse>, EmptyHttpResult, ProblemHttpResult>>
+            ([FromBody] LoginRequest login, [FromQuery] bool? useCookies, [FromServices] IServiceProvider sp) =>
+        {
+            var signInManager = sp.GetRequiredService<SignInManager<IdentityUser>>();
+            var useCookieScheme = useCookies == true;
+            var isPersistent = useCookies == true;
+            signInManager.AuthenticationScheme = useCookieScheme ? IdentityConstants.ApplicationScheme : IdentityConstants.BearerScheme;
+            var user = await signInManager.UserManager.FindByEmailAsync(login.Email);
+            if (user == null || !await signInManager.UserManager.IsEmailConfirmedAsync(user))
+            {
+                return TypedResults.Problem("Email is not confirmed.", statusCode: StatusCodes.Status401Unauthorized);
+            }
+            var result = await signInManager.PasswordSignInAsync(login.Email, login.Password, isPersistent, lockoutOnFailure: false);
+
+            if (!result.Succeeded)
+            {
+                return TypedResults.Problem(result.ToString(), statusCode: StatusCodes.Status401Unauthorized);
+            }
+            // The signInManager already produced the needed response in the form of a cookie or bearer token.
+            return TypedResults.Empty;
+        });
         // customized endpoints
-        group.MapPost("/logout", async Task<NoContent>(SignInManager<IdentityUser> signInManager) =>
+        routeGroup.MapPost("/logout", async Task<NoContent>(SignInManager<IdentityUser> signInManager) =>
         {
             await signInManager.SignOutAsync();
             return TypedResults.NoContent();
         });
-        group.MapPost("/register-new", async Task<Results<Ok, ValidationProblem>>
-            ([FromBody] RegisterRequest registration, HttpContext context, UserManager<IdentityUser> userManager, IUserStore<IdentityUser> userStore) =>
+        routeGroup.MapPost("/register", async Task<Results<Ok, ValidationProblem>>
+            ([FromBody] RegisterRequest registration, HttpContext context, [FromServices] UserManager<IdentityUser> userManager, [FromServices] IUserStore<IdentityUser> userStore) =>
         {
 
             if (!userManager.SupportsUserEmail)
@@ -49,14 +80,143 @@ public static class IdentityEndpoints
             {
                 return CreateValidationProblem(result);
             }
-            // TODO: email sender
-            //await SendConfirmationEmailAsync(user, userManager, context, email);
+            if (userManager.Options.SignIn.RequireConfirmedEmail){
+                // if succeeeded, redirect to server host
+                var request = context.Request;
+                var serverHost = $"{request.Scheme}://{request.Host}";
+                await SendConfirmationEmailAsync(user, userManager, context, email, serverHost, false);
+            }
+            else 
+            {
+                throw new NotSupportedException($"register-new requires account confirmation");
+            }
             return TypedResults.Ok();
         });
-        return group;
-    }
+        routeGroup.MapGet("/confirmEmail", async Task<IResult>
+            ([FromQuery] string userId, [FromQuery] string code, [FromQuery] string? changedEmail, [FromQuery] string? returnUri, HttpContext context) =>
+        {
+            var userManager = context.RequestServices.GetRequiredService<UserManager<IdentityUser>>();
+            if (await userManager.FindByIdAsync(userId) is not { } user)
+            {
+                // We could respond with a 404 instead of a 401 like Identity UI, but that feels like unnecessary information.
+                return TypedResults.Unauthorized();
+            }
 
-    
+            try
+            {
+                code = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(code));
+            }
+            catch (FormatException)
+            {
+                return TypedResults.Unauthorized();
+            }
+
+            IdentityResult result;
+
+            if (string.IsNullOrEmpty(changedEmail))
+            {
+                result = await userManager.ConfirmEmailAsync(user, code);
+            }
+            else
+            {
+                // As with Identity UI, email and user name are one and the same. So when we update the email,
+                // we need to update the user name.
+                result = await userManager.ChangeEmailAsync(user, changedEmail, code);
+
+                if (result.Succeeded)
+                {
+                    result = await userManager.SetUserNameAsync(user, changedEmail);
+                }
+            }
+
+            if (!result.Succeeded)
+            {
+                return TypedResults.Unauthorized();
+            }
+            if (!string.IsNullOrEmpty(returnUri) && Uri.TryCreate(returnUri, UriKind.Absolute, out var validReturnUri))
+            {
+                // only extract host name (not contain port)
+                var serverHost = context.Request.Host.Host.ToString();
+                var allowedHosts = new[] { "yourfrontend.com", "app.yourfrontend.com", serverHost};
+                if (allowedHosts.Contains(validReturnUri.Host))
+                {
+                    return TypedResults.Redirect(validReturnUri.AbsoluteUri); // or LocalRedirect if same origin
+                }
+            }
+            return TypedResults.Text("Thank you for confirming your email.");
+        })
+        .Add(endpointBuilder =>
+        {
+            var finalPattern = ((RouteEndpointBuilder)endpointBuilder).RoutePattern.RawText;
+            confirmEmailEndpointName = $"{nameof(MapIdentityApi)}-{finalPattern}";
+            endpointBuilder.Metadata.Add(new EndpointNameMetadata(confirmEmailEndpointName));
+        });
+
+        routeGroup.MapPost("/resendConfirmationEmail", async Task<Ok>
+            ([FromBody] ResendConfirmationEmailRequest resendRequest, HttpContext context, [FromServices] IServiceProvider sp) =>
+        {
+            var userManager = sp.GetRequiredService<UserManager<IdentityUser>>();
+            if (await userManager.FindByEmailAsync(resendRequest.Email) is not { } user)
+            { // in case email not found in db
+                return TypedResults.Ok();
+            }
+            var is_already_confirmed = await userManager.IsEmailConfirmedAsync(user);
+            if (is_already_confirmed)
+            { // in case user alrady confirmed
+                return TypedResults.Ok();
+            }
+            await SendConfirmationEmailAsync(user, userManager, context, resendRequest.Email);
+            return TypedResults.Ok();
+        });
+        async Task SendConfirmationEmailAsync(IdentityUser user, UserManager<IdentityUser> userManager, HttpContext context, string email, string? returnUri = null, bool isChange = false)
+        {
+            var mailSender = context.RequestServices.GetRequiredService<IEmailSender>();
+            var linkGenerator = context.RequestServices.GetRequiredService<LinkGenerator>();
+            var code = isChange
+                    ? await userManager.GenerateChangeEmailTokenAsync(user, email)
+                    : await userManager.GenerateEmailConfirmationTokenAsync(user);
+            code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+            var userId = await userManager.GetUserIdAsync(user);
+            var routeValues = new RouteValueDictionary()
+            {
+                ["userId"] = userId,
+                ["code"] = code,
+            }; 
+            if (! string.IsNullOrEmpty(returnUri))
+            {
+                routeValues.Add("returnUri", returnUri);
+            }
+            if (isChange)
+            {
+                // This is validated by the /confirmEmail endpoint on change.
+                routeValues.Add("changedEmail", email);
+            }
+            if (confirmEmailEndpointName is null)
+            {
+                throw new NotSupportedException("No email confirmation endpoint was registered.");
+            }
+            var confirmEmailUrl = linkGenerator.GetUriByName(context, confirmEmailEndpointName, routeValues)
+                ?? throw new NotSupportedException($"Could not find endpoint named '{confirmEmailEndpointName}'.");
+            await mailSender.SendEmailAsync(
+                email, 
+                "Account Confirmation Mail", 
+                $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(confirmEmailUrl)}'>clicking here</a>."
+            );
+        }
+        var accountGroup = routeGroup.MapGroup("/manage").RequireAuthorization();
+        accountGroup.MapGet("/info", async Task<Results<Ok<InfoResponse>, ValidationProblem, NotFound>>
+            (ClaimsPrincipal claimsPrincipal, [FromServices] IServiceProvider sp) =>
+        {
+            var userManager = sp.GetRequiredService<UserManager<IdentityUser>>();
+            if (await userManager.GetUserAsync(claimsPrincipal) is not { } user)
+            {
+                return TypedResults.NotFound();
+            }
+
+            return TypedResults.Ok(await CreateInfoResponseAsync(user, userManager));
+        });
+        return routeGroup;
+    }
     private static ValidationProblem CreateValidationProblem(IdentityResult result)
     {
         // We expect a single error code and description in the normal case.
@@ -84,5 +244,42 @@ public static class IdentityEndpoints
 
         return TypedResults.ValidationProblem(errorDictionary);
     }
+    private static async Task<InfoResponse> CreateInfoResponseAsync(IdentityUser user, UserManager<IdentityUser> userManager)
+    {
+        return new()
+        {
+            Email = await userManager.GetEmailAsync(user) ?? throw new NotSupportedException("Users must have an email."),
+            Roles = await userManager.GetRolesAsync(user),
+        };
+    }
 }
 
+
+/// <summary>
+/// The request type for the "/login" endpoint 
+/// </summary>
+public sealed class LoginRequest
+{
+    /// <summary>
+    /// The user's email address which acts as a user name.
+    /// </summary>
+    public required string Email { get; init; }
+
+    /// <summary>
+    /// The user's password.
+    /// </summary>
+    public required string Password { get; init; }
+}
+
+
+public sealed class InfoResponse
+{
+    /// <summary>
+    /// The email address associated with the authenticated user.
+    /// </summary>
+    public required string Email { get; init; }
+    /// <summary>
+    /// Roles of user.
+    /// </summary>
+    public required IList<string> Roles { get; set; }
+}

@@ -7,13 +7,16 @@ public static class EmailEndpoints
 {
     public static RouteGroupBuilder MapEmailApi(this RouteGroupBuilder group)
     {
-        group.MapPost("/send", async Task<Results<Ok, BadRequest>> (HttpContext context, SendMailArg sendMailArg) => 
+        group.MapPost("/send", async Task<Results<Ok, BadRequest>> (MailSender mailSender, string email, string subject, string htmlMessage) => 
         {   
-            
-            var response = await MailSender.SendMail(context, sendMailArg);
-            if (response.IsSuccessStatusCode){
-                return TypedResults.Ok();
-            } else{
+            try
+            {
+                await mailSender.SendEmailAsync(email, subject, htmlMessage);
+                return TypedResults.Ok(); 
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
                 return TypedResults.BadRequest();
             }
         });

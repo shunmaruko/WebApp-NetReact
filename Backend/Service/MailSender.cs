@@ -1,57 +1,42 @@
+using Microsoft.AspNetCore.Identity.UI.Services;
 using SendGrid;
 using SendGrid.Helpers.Mail;
 
 namespace Backend.Service;
-public class SendMailArg
+
+public class MailSender: IEmailSender
 {
-    public required List<string> ToMailList { get; set; }
-    public required string Subject { get; set; }
-    public required string Body { get; set; }
-}
-    
-public static class MailSender
-{
-    private class MailSenderLogger(ILogger<MailSenderLogger> logger)
+    private readonly ILogger _logger;
+    private readonly IConfiguration _config;
+    private readonly ISendGridClient _sendGridClient;
+    public MailSender(ILogger<MailSender> logger, IConfiguration config, ISendGridClient sendGridClient)
     {
-        
-        public void LogInformation(string message)
-        {
-            logger.LogInformation(message);
-        }
-        public void LogError(string message)
-        {
-            logger.LogError(message);
-        }
+        _logger = logger;
+        _config = config;
+        _sendGridClient = sendGridClient;
     }
 
-    public static async Task<Response> SendMail(HttpContext context, SendMailArg sendMailArg)
+    public async Task SendEmailAsync(string email, string subject, string htmlMessage)
     {
-        var logger = context.RequestServices.GetRequiredService<ILogger<MailSenderLogger>>();
-        logger.LogInformation("Send Mail");
-        var config = context.RequestServices.GetRequiredService<IConfiguration>();
-        var fromEmail = config.GetValue<string>("FromEmail") ?? throw new Exception("FromEmail should not be null or empty"); 
-        var fromName = config.GetValue<string>("FromName") ?? throw new Exception("FromName should not be null or empty");
+        _logger.LogInformation("Send Mail");
+        var fromEmail = _config.GetValue<string>("FromEmail") ?? throw new Exception("FromEmail should not be null or empty"); 
+        var fromName = _config.GetValue<string>("FromName") ?? throw new Exception("FromName should not be null or empty");
         var msg = new SendGridMessage()
         {
             From = new EmailAddress(fromEmail, fromName),
-            Subject = sendMailArg.Subject,
-            PlainTextContent = sendMailArg.Body
+            Subject = subject,
+            HtmlContent = htmlMessage,
         };
-        foreach (string toEmail in sendMailArg.ToMailList)
-        {
-            msg.AddTo(new EmailAddress(toEmail));
-        }
-        logger.LogInformation("Call Api");
-        var sendGridClient = context.RequestServices.GetRequiredService<ISendGridClient>();
-        var response = await sendGridClient.SendEmailAsync(msg);
+        msg.AddTo(new EmailAddress(email));
+        _logger.LogInformation("Call Api");
+        var response = await _sendGridClient.SendEmailAsync(msg);
         // A success status code means SendGrid received the email request and will process it.
         // Errors can still occur when SendGrid tries to send the email. 
         // If email is not received, use this URL to debug: https://app.sendgrid.com/email_activity 
         if (response.IsSuccessStatusCode){
-            logger.LogInformation("Email queued successfully!"); 
+            _logger.LogInformation("Email queued successfully!"); 
         } else {
-            logger.LogError("Something went wrong!");
+            _logger.LogError("Something went wrong!");
         }
-        return response;
     }
 }
