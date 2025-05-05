@@ -43,6 +43,60 @@ The reason why Swashbuckle used is, document generation at build time by ```Micr
 Reference :
 - [Swashbuckle vs NSwag](https://devlog.mescius.jp/asp-net-core-web-api-nswag/)
 
+# API
+## Identity
+The below is the authentication diagram. We authenticate user by info endpoint prepared by Identity Provider.
+Plus, we assume to allow any user can access API, i.e., use role just to control UI. Apparently it is not good in terms of security, but 
+is enough to be used just for internal purpose.
+
+```mermaid
+---
+title: Cookie-based password authentication with email confirmation
+---
+sequenceDiagram
+  actor User
+  User->>App: Try to register(1)
+  activate App
+
+  App->>Identity Provider: Request register (2)
+  deactivate App
+  activate Identity Provider
+  Note right of Identity Provider: Generate email confirm code.
+
+  Identity Provider-->>User: Send confirmation email (3)
+  activate User
+  deactivate Identity Provider
+
+  User-->>Identity Provider: Click sended link (4)
+  deactivate User
+  activate Identity Provider
+  Note right of Identity Provider: Validate email confirm code, activate account.
+
+  Identity Provider->>App: Confirm email(5)
+  deactivate Identity Provider
+  activate App
+
+  App->>User: Request login(6)
+  deactivate App
+  activate User
+
+  User->>App: Input login form(7)
+  activate App
+  deactivate User
+
+  App->>Identity Provider: Request login(8)
+  deactivate App
+  activate Identity Provider
+
+  Identity Provider->>App: Give cookie to App(9)
+  activate App
+  deactivate Identity Provider
+  Note right of App: With cookie, App can identify user/user roles.
+
+  App->>API: Request to API (10)
+  deactivate App
+  activate API
+```
 # Data
 ## Migration 
 ```dotnet ef migrations add InitialCreate```
