@@ -69,8 +69,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.MapGroup("/").MapRootApi().WithTags("Root");
-app.MapGroup("/identity").MapIdentityApi().WithTags("Identity");
+app.MapGroup("").MapIdentityApi().WithTags("Identity");
+app.MapGroup("/Sample").MapSampleApi().WithTags("Root");
 app.MapGroup("/email").MapEmailApi().WithTags("Email");
 app.Run();
 

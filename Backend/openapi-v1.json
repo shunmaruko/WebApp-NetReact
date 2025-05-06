@@ -5,45 +5,7 @@
     "version": "1.0.0"
   },
   "paths": {
-    "/": {
-      "get": {
-        "tags": [
-          "Root"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/protected-me": {
-      "get": {
-        "tags": [
-          "Root"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/identity/login": {
+    "/login": {
       "post": {
         "tags": [
           "Identity"
@@ -81,7 +43,7 @@
         }
       }
     },
-    "/identity/logout": {
+    "/logout": {
       "post": {
         "tags": [
           "Identity"
@@ -93,7 +55,7 @@
         }
       }
     },
-    "/identity/register": {
+    "/register": {
       "post": {
         "tags": [
           "Identity"
@@ -125,12 +87,12 @@
         }
       }
     },
-    "/identity/confirmEmail": {
+    "/confirmEmail": {
       "get": {
         "tags": [
           "Identity"
         ],
-        "operationId": "MapIdentityApi-/identity/confirmEmail",
+        "operationId": "MapIdentityApi-/confirmEmail",
         "parameters": [
           {
             "name": "userId",
@@ -170,7 +132,7 @@
         }
       }
     },
-    "/identity/resendConfirmationEmail": {
+    "/resendConfirmationEmail": {
       "post": {
         "tags": [
           "Identity"
@@ -192,7 +154,7 @@
         }
       }
     },
-    "/identity/forgotPassword": {
+    "/forgotPassword": {
       "post": {
         "tags": [
           "Identity"
@@ -224,7 +186,7 @@
         }
       }
     },
-    "/identity/resetPassword": {
+    "/resetPassword": {
       "post": {
         "tags": [
           "Identity"
@@ -256,7 +218,7 @@
         }
       }
     },
-    "/identity/manage/info": {
+    "/me": {
       "get": {
         "tags": [
           "Identity"
@@ -284,6 +246,44 @@
           },
           "404": {
             "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/Sample": {
+      "get": {
+        "tags": [
+          "Root"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Sample/protected-me": {
+      "get": {
+        "tags": [
+          "Root"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
           }
         }
       }
@@ -497,10 +497,10 @@
   },
   "tags": [
     {
-      "name": "Root"
+      "name": "Identity"
     },
     {
-      "name": "Identity"
+      "name": "Root"
     },
     {
       "name": "Email"

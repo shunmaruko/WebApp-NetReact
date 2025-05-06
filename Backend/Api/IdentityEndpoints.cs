@@ -261,8 +261,8 @@ public static class IdentityEndpoints
             return TypedResults.Ok();
         });
 
-        var accountGroup = routeGroup.MapGroup("/manage").RequireAuthorization();
-        accountGroup.MapGet("/info", async Task<Results<Ok<InfoResponse>, ValidationProblem, NotFound>>
+        
+        routeGroup.MapGet("/me", async Task<Results<Ok<InfoResponse>, ValidationProblem, NotFound>>
             (ClaimsPrincipal claimsPrincipal, [FromServices] IServiceProvider sp) =>
         {
             var userManager = sp.GetRequiredService<UserManager<IdentityUser>>();
